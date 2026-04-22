@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Residence Hall Programming Survey — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242836;
+  --border: #2e3345;
+  --text: #e8eaf0;
+  --text-muted: #8b90a5;
+  --accent-academic: #6c5ce7;
+  --accent-social: #fd79a8;
+  --accent-navigation: #00cec9;
+  --accent-wellness: #55efc4;
+  --glow-academic: rgba(108,92,231,0.25);
+  --glow-social: rgba(253,121,168,0.25);
+  --glow-navigation: rgba(0,206,201,0.25);
+  --glow-wellness: rgba(85,239,196,0.25);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.grain {
+  position: fixed; inset:0; pointer-events:none; z-index:999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 128px;
+}
+header {
+  padding: 48px 48px 24px;
+  position: relative;
+}
+header::after {
+  content:'';
+  position:absolute; bottom:0; left:48px; right:48px;
+  height:1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  font-size: 2.8rem;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #e8eaf0 30%, #6c5ce7 60%, #fd79a8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+header p {
+  color: var(--text-muted);
+  font-size: 1rem;
+  max-width: 600px;
+}
+.container { padding: 32px 48px 64px; }
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin: 40px 0 20px;
+  display:flex; align-items:center; gap:12px;
+}
+.section-title .dot {
+  width:10px; height:10px; border-radius:50%;
+  display:inline-block;
+}
+
+/* KPI Row */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.kpi:hover { transform: translateY(-2px); }
+.kpi .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.kpi .value { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; }
+.kpi .sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+.kpi::before {
+  content:'';
+  position:absolute; top:-30px; right:-30px;
+  width:100px; height:100px;
+  border-radius:50%;
+  opacity:0.15;
+}
+.kpi:nth-child(1)::before { background: var(--accent-academic); }
+.kpi:nth-child(2)::before { background: var(--accent-social); }
+.kpi:nth-child(3)::before { background: var(--accent-navigation); }
+.kpi:nth-child(4)::before { background: var(--accent-wellness); }
+
+/* Tabs */
+.tabs {
+  display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap;
+}
+.tab {
+  padding:8px 20px;
+  border-radius:100px;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--text-muted);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  font-size:0.9rem;
+  transition:all 0.25s;
+}
+.tab:hover { border-color: var(--text-muted); color:var(--text); }
+.tab.active { background:var(--accent-academic); border-color:var(--accent-academic); color:#fff; }
+.tab[data-cat="Social"].active { background:var(--accent-social); border-color:var(--accent-social); }
+.tab[data-cat="Navigation"].active { background:var(--accent-navigation); border-color:var(--accent-navigation); color:#0f1117; }
+.tab[data-cat="Wellness"].active { background:var(--accent-wellness); border-color:var(--accent-wellness); color:#0f1117; }
+
+/* Chart area */
+.chart-grid {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.chart-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  min-height:320px;
+}
+.chart-card h3 {
+  font-size:1rem; font-weight:700; margin-bottom:16px;
+}
+
+/* Horizontal bar chart */
+.bar-chart { display:flex; flex-direction:column; gap:10px; }
+.bar-row { display:flex; align-items:center; gap:10px; }
+.bar-label {
+  width:200px; font-size:0.82rem; color:var(--text-muted);
+  text-align:right; flex-shrink:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.bar-track {
+  flex:1; height:28px; background:var(--surface2); border-radius:6px;
+  overflow:hidden; display:flex; position:relative;
+}
+.bar-segment {
+  height:100%; transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+  position:relative;
+}
+.bar-segment:hover { filter:brightness(1.2); }
+.bar-val {
+  font-size:0.75rem; color:var(--text); min-width:32px; text-align:left;
+  display:flex; align-items:center; padding-left:8px;
+}
+
+/* Legend */
+.legend {
+  display:flex; gap:16px; flex-wrap:wrap; margin:16px 0 8px;
+}
+.legend-item { display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--text-muted); }
+.legend-swatch { width:12px; height:12px; border-radius:3px; }
+
+/* Heatmap */
+.heatmap-container { overflow-x:auto; }
+.heatmap { border-collapse:collapse; width:100%; font-size:0.8rem; }
+.heatmap th { padding:8px 6px; text-align:center; color:var(--text-muted); font-weight:500; font-size:0.75rem; }
+.heatmap td {
+  padding:8px 6px; text-align:center; border-radius:6px;
+  transition: transform 0.15s;
+}
+.heatmap td:hover { transform:scale(1.15); z-index:2; }
+.heatmap .row-label { text-align:right; color:var(--text-muted); padding-right:12px; font-size:0.78rem; white-space:nowrap; }
+
+/* Ranking */
+.rank-list { display:flex; flex-direction:column; gap:8px; }
+.rank-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 16px;
+  background:var(--surface2);
+  border-radius:10px;
+  transition: transform 0.15s;
+}
+.rank-item:hover { transform:translateX(4px); }
+.rank-num {
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem; font-weight:900;
+  width:28px; text-align:center;
+}
+.rank-name { flex:1; font-size:0.88rem; }
+.rank-score {
+  font-weight:700; font-size:0.95rem;
+  padding:4px 12px; border-radius:100px;
+}
+.rank-cat {
+  font-size:0.7rem; text-transform:uppercase; letter-spacing:1px;
+  padding:2px 8px; border-radius:100px; border:1px solid;
+}
+
+/* Insights */
+.insights {
+  display:grid; grid-template-columns: repeat(3,1fr); gap:16px; margin-top:24px;
+}
+.insight {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  border-left:3px solid;
+}
+.insight h4 { font-size:0.95rem; margin-bottom:8px; }
+.insight p { font-size:0.83rem; color:var(--text-muted); line-height:1.5; }
+
+@media (max-width:900px) {
+  header { padding:24px; }
+  h1 { font-size:1.8rem; }
+  .container { padding:16px; }
+  .kpi-row { grid-template-columns:1fr 1fr; }
+  .chart-grid { grid-template-columns:1fr; }
+  .insights { grid-template-columns:1fr; }
+  .bar-label { width:120px; font-size:0.75rem; }
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.animate { animation: fadeUp 0.5s ease forwards; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<header>
+  <h1>Residence Hall Programming</h1>
+  <p>Student participation survey results across 30 activities — Academic, Social, Navigation & Wellness</p>
+</header>
+<div class="container" id="app"></div>
+
+<script>
+const DATA = [
+  {cat:"Academic",name:"Common read discussion",vals:[3,2,4,3,0,0]},
+  {cat:"Academic",name:"Faculty lectures",vals:[5,0,7,0,0,0]},
+  {cat:"Academic",name:"Guest speakers",vals:[5,5,0,2,0,0]},
+  {cat:"Academic",name:"Study groups",vals:[3,2,1,2,5,0]},
+  {cat:"Academic",name:"Common course",vals:[0,0,0,0,0,0]},
+  {cat:"Academic",name:"Study skill sessions",vals:[1,4,4,2,0,0]},
+  {cat:"Academic",name:"Tutoring in the dorm",vals:[3,1,3,3,2,0]},
+  {cat:"Academic",name:"Classes with dorm mates",vals:[5,0,1,2,4,0]},
+  {cat:"Social",name:"Movies",vals:[0,3,3,4,2,0]},
+  {cat:"Social",name:"Craft night",vals:[3,0,2,2,5,0]},
+  {cat:"Social",name:"Athletic Events",vals:[3,0,2,2,3,2]},
+  {cat:"Social",name:"Field Trips",vals:[1,2,0,2,4,3]},
+  {cat:"Social",name:"Game Nights",vals:[1,2,4,1,4,0]},
+  {cat:"Social",name:"Ropes Courses",vals:[5,2,1,2,2,0]},
+  {cat:"Social",name:"Tucson events",vals:[3,0,1,2,6,0]},
+  {cat:"Social",name:"Meals with Faculty",vals:[3,2,2,2,3,0]},
+  {cat:"Navigation",name:"Career fairs",vals:[2,4,3,0,3,0]},
+  {cat:"Navigation",name:"Meet your major",vals:[0,0,0,7,5,0]},
+  {cat:"Navigation",name:"Attend Career fairs",vals:[0,0,0,0,0,0]},
+  {cat:"Navigation",name:"Study abroad fairs",vals:[2,5,3,1,1,0]},
+  {cat:"Navigation",name:"Campus tours",vals:[5,2,3,2,0,0]},
+  {cat:"Navigation",name:"Learning about clubs",vals:[0,2,6,4,0,0]},
+  {cat:"Wellness",name:"Campus Rec tour",vals:[8,0,2,1,1,0]},
+  {cat:"Wellness",name:"Intramural teams",vals:[1,3,3,5,0,0]},
+  {cat:"Wellness",name:"Cooking in dorms",vals:[2,2,2,3,3,0]},
+  {cat:"Wellness",name:"Sleep habits",vals:[6,2,2,0,2,0]},
+  {cat:"Wellness",name:"Time Management",vals:[5,3,0,3,1,0]},
+  {cat:"Wellness",name:"Stress management",vals:[6,0,1,4,1,0]},
+  {cat:"Wellness",name:"Volunteering",vals:[2,2,2,3,3,0]},
+  {cat:"Wellness",name:"Fitness Classes",vals:[0,3,2,0,6,1]},
+];
+
+const LEVELS = ["0%","25%","50%","75%","100%","100%+"];
+const COLORS_HEAT = ["#2d1b69","#6c5ce7","#a29bfe","#55efc4","#00b894","#fdcb6e"];
+const COLORS_BAR = ["#636e85","#6c5ce7","#a29bfe","#00cec9","#55efc4","#fdcb6e"];
+const CAT_COLOR = {Academic:"#6c5ce7",Social:"#fd79a8",Navigation:"#00cec9",Wellness:"#55efc4"};
+
+function score(v) {
+  const weights = [0, 0.25, 0.5, 0.75, 1, 1.25];
+  const total = v.reduce((a,b)=>a+b,0);
+  if(total===0) return 0;
+  return v.reduce((s,c,i)=>s+c*weights[i],0)/total;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  const cats = ["Academic","Social","Navigation","Wellness"];
+  const catData = {};
+  cats.forEach(c => { catData[c] = DATA.filter(d=>d.cat===c); });
+
+  // KPIs
+  const totalResp = DATA.reduce((s,d)=>s+d.vals.reduce((a,b)=>a+b,0),0);
+  const scored = DATA.filter(d=>d.vals.reduce((a,b)=>a+b,0)>0).map(d=>({...d,score:score(d.vals)})).sort((a,b)=>b.score-a.score);
+  const topActivity = scored[0];
+  const bottomActivity = scored[scored.length-1];
+  const highEnthusiasm = DATA.reduce((s,d)=>s+d.vals[4]+d.vals[5],0);
+
+  let html = `
+  <div class="kpi-row animate">
+    <div class="kpi"><div class="label">Total Responses</div><div class="value">${totalResp}</div><div class="sub">across 30 activities</div></div>
+    <div class="kpi"><div class="label">Most Popular</div><div class="value" style="font-size:1.4rem">${topActivity.name}</div><div class="sub">Score: ${(topActivity.score*100).toFixed(0)}%</div></div>
+    <div class="kpi"><div class="label">Least Popular</div><div class="value" style="font-size:1.4rem">${bottomActivity.name}</div><div class="sub">Score: ${(bottomActivity.score*100).toFixed(0)}%</div></div>
+    <div class="kpi"><div class="label">High Enthusiasm</div><div class="value">${highEnthusiasm}</div><div class="sub">responses at 100%+</div></div>
+  </div>`;
+
+  // Tabs + Stacked Bar
+  html += `<div class="section-title"><span class="dot" style="background:var(--accent-academic)"></span> Participation Breakdown</div>`;
+  html += `<div class="tabs" id="tabs">`;
+  cats.forEach((c,i) => {
+    html += `<button class="tab ${i===0?'active':''}" data-cat="${c}" onclick="switchTab('${c}')">${c}</button>`;
+  });
+  html += `<button class="tab" data-cat="All" onclick="switchTab('All')">All</button></div>`;
+
+  html += `<div class="legend">`;
+  LEVELS.forEach((l,i) => {
+    html += `<div class="legend-item"><div class="legend-swatch" style="background:${COLORS_BAR[i]}"></div>${l}</div>`;
+  });
+  html += `</div>`;
+
+  html += `<div id="bar-area"></div>`;
+
+  // Chart Grid
+  html += `<div class="chart-grid" style="margin-top:32px">`;
+
+  // Heatmap
+  html += `<div class="chart-card"><h3>Engagement Heatmap</h3><div class="heatmap-container"><table class="heatmap"><thead><tr><th></th>`;
+  LEVELS.forEach(l => { html += `<th>${l}</th>`; });
+  html += `</tr></thead><tbody>`;
+  scored.forEach(d => {
+    const total = d.vals.reduce((a,b)=>a+b,0);
+    html += `<tr><td class="row-label">${d.name}</td>`;
+    d.vals.forEach((v,i) => {
+      const intensity = total > 0 ? v / Math.max(...d.vals.filter(x=>x>0)) : 0;
+      const bg = `rgba(${i<3?'108,92,231':'85,239,196'},${(intensity*0.8+0.05).toFixed(2)})`;
+      html += `<td style="background:${bg};color:${intensity>0.5?'#fff':'var(--text-muted)'}">${v||''}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+
+  // Top 10 Ranking
+  html += `<div class="chart-card"><h3>Top 10 Activities by Weighted Score</h3><div class="rank-list">`;
+  scored.slice(0,10).forEach((d,i) => {
+    const pct = (d.score*100).toFixed(0);
+    const col = CAT_COLOR[d.cat];
+    html += `<div class="rank-item">
+      <div class="rank-num" style="color:${col}">${i+1}</div>
+      <div class="rank-name">${d.name}</div>
+      <span class="rank-cat" style="color:${col};border-color:${col}">${d.cat}</span>
+      <div class="rank-score" style="background:${col}22;color:${col}">${pct}%</div>
+    </div>`;
+  });
+  html += `</div></div></div>`;
+
+  // Insights
+  html += `<div class="section-title"><span class="dot" style="background:var(--accent-social)"></span> Key Insights</div>`;
+  html += `<div class="insights">
+    <div class="insight" style="border-left-color:var(--accent-academic)">
+      <h4>📚 Academic</h4>
+      <p>Study groups dominate with 5 students at 100%. Passive formats like lectures & guest speakers skew heavily to 0%. Students want collaborative, peer-driven learning.</p>
+    </div>
+    <div class="insight" style="border-left-color:var(--accent-social)">
+      <h4>🎉 Social</h4>
+      <p>Field Trips are the only activity with "over 100%" enthusiasm (3 responses). Tucson events & Craft nights also score high. Students crave off-campus & hands-on experiences.</p>
+    </div>
+    <div class="insight" style="border-left-color:var(--accent-navigation)">
+      <h4>🧭 Navigation</h4>
+      <p>Meet Your Major is a standout — 100% of responses land at 75% or above. Career navigation resonates when it's personally relevant, not generic.</p>
+    </div>
+    <div class="insight" style="border-left-color:var(--accent-wellness)">
+      <h4>🌿 Wellness</h4>
+      <p>Fitness Classes in dorms lead with 6 at 100%. Campus Rec tours are the single least popular activity (8 at 0%). Bring wellness to students, don't make them go find it.</p>
+    </div>
+    <div class="insight" style="border-left-color:#fdcb6e">
+      <h4>⚡ Recommendation</h4>
+      <p>Double down on: Study groups, Field trips, Meet your major, Fitness classes, Tucson events. These have the strongest engagement signals and clear student demand.</p>
+    </div>
+    <div class="insight" style="border-left-color:#636e85">
+      <h4>🚫 Reconsider</h4>
+      <p>Campus Rec tours, Faculty lectures, Ropes courses, and Sleep habits sessions consistently score low. Consider redesigning these or reallocating budget to higher-demand programming.</p>
+    </div>
+  </div>`;
+
+  app.innerHTML = html;
+  switchTab('Academic');
+}
+
+function switchTab(cat) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat===cat));
+  const items = cat==='All' ? DATA.filter(d=>d.vals.reduce((a,b)=>a+b,0)>0) : DATA.filter(d=>d.cat===cat && d.vals.reduce((a,b)=>a+b,0)>0);
+  items.sort((a,b)=>score(b.vals)-score(a.vals));
+
+  let html = `<div class="bar-chart">`;
+  items.forEach(d => {
+    const total = d.vals.reduce((a,b)=>a+b,0);
+    html += `<div class="bar-row"><div class="bar-label">${d.name}</div><div class="bar-track">`;
+    d.vals.forEach((v,i) => {
+      if(v>0) {
+        const w = (v/total*100).toFixed(1);
+        html += `<div class="bar-segment" style="width:${w}%;background:${COLORS_BAR[i]}" title="${LEVELS[i]}: ${v}"></div>`;
+      }
+    });
+    html += `</div><div class="bar-val">${total}</div></div>`;
+  });
+  html += `</div>`;
+  document.getElementById('bar-area').innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
